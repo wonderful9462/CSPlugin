@@ -6,7 +6,7 @@ const STORAGE_KEYS = {
   RECORDING: 'cs2ct_recording',
   DATA: 'cs2ct_data',
   STATS: 'cs2ct_stats',
-  SCRAPED_URLS: 'cs2ct_scraped_urls'
+  SCRAPED_ITEMS: 'cs2ct_scraped_items'
 };
 
 /** 与 manifest content_scripts 一致，用于程序化注入 */
@@ -28,6 +28,26 @@ const TARGET_URL_PATTERNS = [
 
 /** 抓取请求队列，串行处理避免并发写入覆盖 */
 let scrapeQueue = Promise.resolve();
+
+/** 规范化商品名：去除空格，括号转为中文括号 */
+function normalizeGoodsName(name) {
+  if (!name || typeof name !== 'string') return '';
+  return name
+    .replace(/\s/g, '')
+    .replace(/\(/g, '（')
+    .replace(/\)/g, '）')
+    .replace(/\[/g, '【')
+    .replace(/\]/g, '】')
+    .replace(/\{/g, '｛')
+    .replace(/\}/g, '｝');
+}
+
+/** 生成商品唯一标识：goods_name + float_value */
+function getItemKey(goodsName, floatValue) {
+  const normalized = normalizeGoodsName(goodsName);
+  const floatStr = floatValue != null ? String(floatValue) : '';
+  return `${normalized}|${floatStr}`;
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'SCRAPE_DATA') {
@@ -80,57 +100,52 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local.set({
       [STORAGE_KEYS.DATA]: [],
       [STORAGE_KEYS.STATS]: {},
-      [STORAGE_KEYS.SCRAPED_URLS]: []
+      [STORAGE_KEYS.SCRAPED_ITEMS]: []
     }).then(() => {
       sendResponse({ ok: true });
-      chrome.tabs.query({ url: TARGET_URL_PATTERNS }, (tabs) => {
-        tabs.forEach((tab) => {
-          if (tab.id) chrome.tabs.sendMessage(tab.id, { type: 'CLEAR_SCRAPED' }).catch(() => {});
-        });
-      });
-    });
-    return true;
-  }
-  if (message.type === 'CHECK_URL_SCRAPED') {
-    chrome.storage.local.get(STORAGE_KEYS.SCRAPED_URLS).then(r => {
-      const urls = r[STORAGE_KEYS.SCRAPED_URLS] || [];
-      sendResponse({ scraped: urls.includes(message.url) });
     });
     return true;
   }
 });
 
 async function handleScrapedData(payload) {
-  const { platform, goodsName, items, url } = payload;
+  const { platform, goodsName, items } = payload;
   if (!items?.length) return { ok: true };
 
   const result = await chrome.storage.local.get([
     STORAGE_KEYS.DATA,
     STORAGE_KEYS.STATS,
-    STORAGE_KEYS.SCRAPED_URLS
+    STORAGE_KEYS.SCRAPED_ITEMS
   ]);
   const data = result[STORAGE_KEYS.DATA] || [];
   const stats = result[STORAGE_KEYS.STATS] || {};
-  const scrapedUrls = result[STORAGE_KEYS.SCRAPED_URLS] || [];
+  const scrapedItems = new Set(result[STORAGE_KEYS.SCRAPED_ITEMS] || []);
 
-  // 二次校验：URL 已抓取则跳过，避免竞态导致的重复
-  if (url && scrapedUrls.includes(url)) return { ok: true, skipped: true };
+  const normalizedGoodsName = normalizeGoodsName(goodsName || '未知商品');
+  if (normalizedGoodsName === '未知商品') return { ok: true }; // goods_name 无效则丢弃
 
-  // 追加数据
-  const newItems = items.map(item => ({ ...item, goods_name: goodsName }));
-  data.push(...newItems);
+  const newItemsToAdd = [];
 
-  // 更新统计：按皮肤名称计数（去除名称中所有空格）
-  const name = (goodsName || '未知商品').replace(/\s/g, '');
-  stats[name] = (stats[name] || 0) + items.length;
+  for (const item of items) {
+    // 仅保存 float_value 和 price 同时存在的商品，否则丢弃（网页未加载完时可能缺失）
+    if (item.float_value == null || item.price == null) continue;
 
-  // 记录已抓取 URL
-  if (url && !scrapedUrls.includes(url)) scrapedUrls.push(url);
+    const key = getItemKey(goodsName || item.goods_name || '未知商品', item.float_value);
+    if (scrapedItems.has(key)) continue;
+
+    scrapedItems.add(key);
+    newItemsToAdd.push({ ...item, goods_name: normalizedGoodsName });
+  }
+
+  if (newItemsToAdd.length === 0) return { ok: true, total: data.length, skipped: true };
+
+  data.push(...newItemsToAdd);
+  stats[normalizedGoodsName] = (stats[normalizedGoodsName] || 0) + newItemsToAdd.length;
 
   await chrome.storage.local.set({
     [STORAGE_KEYS.DATA]: data,
     [STORAGE_KEYS.STATS]: stats,
-    [STORAGE_KEYS.SCRAPED_URLS]: scrapedUrls
+    [STORAGE_KEYS.SCRAPED_ITEMS]: Array.from(scrapedItems)
   });
 
   return { ok: true, total: data.length };
@@ -143,4 +158,3 @@ async function getStoredData() {
     stats: result[STORAGE_KEYS.STATS] || {}
   };
 }
-

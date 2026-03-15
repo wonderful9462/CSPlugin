@@ -5,7 +5,7 @@
 ## 功能
 
 - **弹窗面板**：点击扩展图标打开弹窗
-- **录制模式**：开始录制后，访问商品页会自动抓取数据
+- **录制模式**：开始录制后，访问商品页会直接尝试抓取数据（按商品去重：goods_name + float_value）
 - **统计面板**：按皮肤名称（如「FN57 | 涂鸦潦草 (略有磨损)」）统计抓取数量
 - **保存 / 清除**：保存为 JSONL 到本地，或清除所有数据
 
@@ -62,7 +62,6 @@ CSPlugin/
 
 1. 在 `platforms/platformRegistry.js` 的 `PLATFORMS` 中注册：`{ host: 'xxx.com', scraper: null, isExpectedUrl }`
 2. 新建 `platforms/xxx.js`，实现 `parseGoodsId`、`getGoodsName`、`extractProductData`、`hasProductElements`，并调用 `registerScraper`
-3. 若分页不改变 URL（如 UUYP、C5），需实现 `getEffectiveUrl(baseUrl)` 将页码拼接到 URL 用于去重
-4. 在 `manifest.json` 的 `content_scripts.js` 中按顺序加入新文件
-5. 在 `manifest.json` 的 `host_permissions` 和 `content_scripts.matches` 中加入新平台的 URL 模式
-6. 在 `background.js` 的 `CONTENT_SCRIPT_FILES` 和 `TARGET_URL_PATTERNS` 中加入新平台
+3. 在 `manifest.json` 的 `content_scripts.js` 中按顺序加入新文件
+4. 在 `manifest.json` 的 `host_permissions` 和 `content_scripts.matches` 中加入新平台的 URL 模式
+5. 在 `background.js` 的 `CONTENT_SCRIPT_FILES` 和 `TARGET_URL_PATTERNS` 中加入新平台
