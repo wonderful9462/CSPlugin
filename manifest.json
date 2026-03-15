@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "CS2CT皮肤数据抓取",
+  "version": "1.0.0",
+  "description": "抓取不同平台皮肤信息并保存为JSONL文件",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://buff.163.com/*",
+    "https://www.youpin898.com/*",
+    "https://www.ecosteam.cn/*",
+    "https://www.c5game.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "logo.png",
+      "32": "logo.png",
+      "48": "logo.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "logo.png",
+    "48": "logo.png",
+    "128": "logo.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://buff.163.com/*",
+        "https://www.youpin898.com/*",
+        "https://www.ecosteam.cn/*",
+        "https://www.c5game.com/*"
+      ],
+      "js": [
+        "platforms/platformRegistry.js",
+        "platforms/buff.js",
+        "platforms/uuyp.js",
+        "platforms/eco.js",
+        "platforms/c5.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
