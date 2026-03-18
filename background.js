@@ -5,8 +5,7 @@
 const STORAGE_KEYS = {
   RECORDING: 'cs2ct_recording',
   DATA: 'cs2ct_data',
-  STATS: 'cs2ct_stats',
-  SCRAPED_ITEMS: 'cs2ct_scraped_items'
+  STATS: 'cs2ct_stats'
 };
 
 /** 与 manifest content_scripts 一致，用于程序化注入 */
@@ -99,8 +98,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'CLEAR_DATA') {
     chrome.storage.local.set({
       [STORAGE_KEYS.DATA]: [],
-      [STORAGE_KEYS.STATS]: {},
-      [STORAGE_KEYS.SCRAPED_ITEMS]: []
+      [STORAGE_KEYS.STATS]: {}
     }).then(() => {
       sendResponse({ ok: true });
     });
@@ -108,44 +106,59 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+/** 从 item 数组构建 key -> item 字典（存储格式保证无重复 key） */
+function buildDataMap(items) {
+  const map = new Map();
+  for (const item of items) {
+    map.set(getItemKey(item.goods_name, item.float_value), item);
+  }
+  return map;
+}
+
 async function handleScrapedData(payload) {
-  const { platform, goodsName, items } = payload;
+  const { goodsName, items } = payload;
   if (!items?.length) return { ok: true };
 
-  const result = await chrome.storage.local.get([
-    STORAGE_KEYS.DATA,
-    STORAGE_KEYS.STATS,
-    STORAGE_KEYS.SCRAPED_ITEMS
-  ]);
-  const data = result[STORAGE_KEYS.DATA] || [];
+  const result = await chrome.storage.local.get([STORAGE_KEYS.DATA, STORAGE_KEYS.STATS]);
   const stats = result[STORAGE_KEYS.STATS] || {};
-  const scrapedItems = new Set(result[STORAGE_KEYS.SCRAPED_ITEMS] || []);
 
   const normalizedGoodsName = normalizeGoodsName(goodsName || '未知商品');
   if (normalizedGoodsName === '未知商品') return { ok: true }; // goods_name 无效则丢弃
 
-  const newItemsToAdd = [];
+  // 从已有 data 构建字典（同 key 只保留最低价）
+  const dataMap = buildDataMap(result[STORAGE_KEYS.DATA] || []);
 
+  // 本批次内先按 key 去重，只保留每个 key 价格最低的 item
+  const batchMap = new Map();
   for (const item of items) {
-    // 仅保存 float_value 和 price 同时存在的商品，否则丢弃（网页未加载完时可能缺失）
     if (item.float_value == null || item.price == null) continue;
-
     const key = getItemKey(goodsName || item.goods_name || '未知商品', item.float_value);
-    if (scrapedItems.has(key)) continue;
-
-    scrapedItems.add(key);
-    newItemsToAdd.push({ ...item, goods_name: normalizedGoodsName });
+    const normalized = { ...item, goods_name: normalizedGoodsName };
+    const existing = batchMap.get(key);
+    if (!existing || item.price < existing.price) batchMap.set(key, normalized);
   }
 
-  if (newItemsToAdd.length === 0) return { ok: true, total: data.length, skipped: true };
+  let newCount = 0;
+  let hasChange = false;
+  for (const [key, item] of batchMap) {
+    const existing = dataMap.get(key);
+    if (!existing || item.price < existing.price) {
+      dataMap.set(key, item);
+      if (!existing) newCount++;
+      hasChange = true;
+    }
+  }
 
-  data.push(...newItemsToAdd);
-  stats[normalizedGoodsName] = (stats[normalizedGoodsName] || 0) + newItemsToAdd.length;
+  if (!hasChange) return { ok: true, total: dataMap.size, skipped: true };
+
+  stats[normalizedGoodsName] = (stats[normalizedGoodsName] || 0) + newCount;
+
+  // 保存时再转为列表
+  const data = Array.from(dataMap.values());
 
   await chrome.storage.local.set({
     [STORAGE_KEYS.DATA]: data,
-    [STORAGE_KEYS.STATS]: stats,
-    [STORAGE_KEYS.SCRAPED_ITEMS]: Array.from(scrapedItems)
+    [STORAGE_KEYS.STATS]: stats
   });
 
   return { ok: true, total: data.length };

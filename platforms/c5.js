@@ -76,20 +76,10 @@
     return Array.from(rows).some((row) => !row.closest('.el-carousel, [class*="el-carousel"]'));
   }
 
-  /** 将当前页码拼接到 URL，用于分页不改变地址时的去重标识 */
-  function getEffectiveUrl(baseUrl) {
-    const activeEl = document.querySelector('.el-pager li.number.active, [class*="el-pager"] li[class*="number"][class*="active"]');
-    const pageNum = activeEl ? parseInt(activeEl.textContent.trim(), 10) : 1;
-    const page = isNaN(pageNum) ? 1 : pageNum;
-    const sep = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${sep}_page=${page}`;
-  }
-
   registerScraper('c5', {
     parseGoodsId,
     getGoodsName,
     extractProductData,
-    hasProductElements,
-    getEffectiveUrl
+    hasProductElements
   });
 })();

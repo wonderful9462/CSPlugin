@@ -66,7 +66,7 @@
 
       await chrome.runtime.sendMessage({
         type: 'SCRAPE_DATA',
-        payload: { platform: items[0].platform, goodsName, items }
+        payload: { goodsName, items }
       });
     } catch (_) {}
   }
