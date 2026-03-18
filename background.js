@@ -125,6 +125,7 @@ async function handleScrapedData(payload) {
 
   const normalizedGoodsName = normalizeGoodsName(goodsName || '未知商品');
   if (normalizedGoodsName === '未知商品') return { ok: true }; // goods_name 无效则丢弃
+  if (normalizedGoodsName.includes('（纪念品）')) return { ok: true }; // 纪念品舍弃
 
   // 从已有 data 构建字典（同 key 只保留最低价）
   const dataMap = buildDataMap(result[STORAGE_KEYS.DATA] || []);
