@@ -28,7 +28,7 @@ const TARGET_URL_PATTERNS = [
 /** 抓取请求队列，串行处理避免并发写入覆盖 */
 let scrapeQueue = Promise.resolve();
 
-/** 规范化商品名：去除空格，括号转为中文括号 */
+/** 规范化商品名：去除空格，括号转为中文括号，英文字母转大写 */
 function normalizeGoodsName(name) {
   if (!name || typeof name !== 'string') return '';
   return name
@@ -38,7 +38,8 @@ function normalizeGoodsName(name) {
     .replace(/\[/g, '【')
     .replace(/\]/g, '】')
     .replace(/\{/g, '｛')
-    .replace(/\}/g, '｝');
+    .replace(/\}/g, '｝')
+    .toUpperCase();
 }
 
 /** 生成商品唯一标识：goods_name + float_value */
