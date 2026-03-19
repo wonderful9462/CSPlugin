@@ -39,7 +39,8 @@ function normalizeGoodsName(name) {
     .replace(/\]/g, '】')
     .replace(/\{/g, '｛')
     .replace(/\}/g, '｝')
-    .toUpperCase();
+    .toUpperCase()
+    .replace(/STATTRAK/g, 'StatTrak');
 }
 
 /** 生成商品唯一标识：goods_name + float_value */
