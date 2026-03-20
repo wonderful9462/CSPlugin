@@ -9,6 +9,20 @@
 
   const PRICE_REGEX = /[¥￥]\s*([\d.]+)/;
 
+  /** C5 把整数与小数拆到相邻 span，textContent 中间会有换行，[\d.]+ 会在换行处截断，必须先去掉空白 */
+  function parsePriceFromOrPriceEl(priceEl) {
+    if (!priceEl) return null;
+    const compact = (priceEl.textContent || '').replace(/\s+/g, '');
+    const m = compact.match(PRICE_REGEX);
+    if (m) {
+      const n = parseFloat(m[1]);
+      if (!isNaN(n)) return n;
+    }
+    const stripped = compact.replace(/[¥￥]/g, '');
+    const n = parseFloat(stripped);
+    return !isNaN(n) ? n : null;
+  }
+
   function parseGoodsId() {
     const match = window.location.pathname.match(/\/csgo\/(\d+)/);
     return match ? parseInt(match[1], 10) : null;
@@ -45,13 +59,7 @@
         let price = null;
         const priceEl = row.querySelector('.or-price.text-price, [class*="or-price"][class*="text-price"], .col-5 .or-price');
         if (priceEl) {
-          const priceMatch = priceEl.textContent?.match(PRICE_REGEX);
-          if (priceMatch) price = parseFloat(priceMatch[1]);
-          if (price == null) {
-            const fullText = (priceEl.textContent || '').replace(/[¥￥\s]/g, '');
-            const num = parseFloat(fullText);
-            if (!isNaN(num)) price = num;
-          }
+          price = parsePriceFromOrPriceEl(priceEl);
         }
 
         if (price == null || isNaN(price)) return;
