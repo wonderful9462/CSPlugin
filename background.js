@@ -12,7 +12,7 @@ const STORAGE_KEYS = {
 const CONTENT_SCRIPT_FILES = [
   'platforms/platformRegistry.js',
   'platforms/buff.js',
-  'platforms/uuyp.js',
+  'platforms/yyyp.js',
   'platforms/eco.js',
   'platforms/c5.js',
   'content.js'

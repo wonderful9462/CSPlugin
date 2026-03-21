@@ -1,5 +1,5 @@
 /**
- * 悠悠有品（UUYP）平台抓取
+ * 悠悠有品（YYYP）平台抓取
  */
 
 (function () {
@@ -58,7 +58,7 @@ function extractProductData() {
       if (price == null || isNaN(price)) continue;
 
       items.push({
-        platform: 'uuyp',
+        platform: 'yyyp',
         goods_id: goodsId,
         float_value: floatValue,
         price: price,
@@ -83,7 +83,7 @@ function hasProductElements() {
   return false;
 }
 
-  registerScraper('uuyp', {
+  registerScraper('yyyp', {
     parseGoodsId,
     getGoodsName,
     extractProductData,

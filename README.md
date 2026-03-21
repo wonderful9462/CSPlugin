@@ -13,7 +13,7 @@
 
 | 字段 | 说明 |
 |------|------|
-| `platform` | 平台标识：`buff` / `uuyp` / `eco` / `c5` |
+| `platform` | 平台标识：`buff` / `yyyp` / `eco` / `c5` |
 | `goods_id` | 商品 ID |
 | `float_value` | 磨损度，无磨损为 `null` |
 | `price` | 价格（人民币） |
@@ -49,7 +49,7 @@ CSPlugin/
 ├── platforms/         # 平台抓取模块（高内聚低耦合）
 │   ├── platformRegistry.js  # 平台注册与调度
 │   ├── buff.js        # BUFF 抓取
-│   ├── uuyp.js        # 悠悠有品抓取
+│   ├── yyyp.js        # 悠悠有品抓取
 │   ├── eco.js         # ECO 在售抓取
 │   └── c5.js          # C5GAME 在售抓取
 ├── popup.html

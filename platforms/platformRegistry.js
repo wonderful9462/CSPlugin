@@ -10,7 +10,7 @@
       scraper: null,
       isExpectedUrl: (pathname) => /\/goods\/\d+/.test(pathname)
     },
-    uuyp: {
+    yyyp: {
       host: 'youpin898.com',
       scraper: null,
       isExpectedUrl: (pathname, search) =>
